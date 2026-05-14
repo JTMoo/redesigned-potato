@@ -1,0 +1,340 @@
+version: "3.9"
+
+services:
+  # --- Infrastructure ---
+
+  seq:
+    image: datalust/seq:latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_API_KEY=${SEQ_API_KEY}
+    ports:
+      - "5341:80"
+      - "5342:5341"
+    volumes:
+      - seq-data:/data
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  user-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  receipt-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: receiptdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${RECEIPT_DB_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - receipt-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  deal-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: dealdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DEAL_DB_PASSWORD}
+    ports:
+      - "5434:5432"
+    volumes:
+      - deal-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  matching-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: matchingdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${MATCHING_DB_PASSWORD}
+    ports:
+      - "5435:5432"
+    volumes:
+      - matching-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  aggregation-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: aggregationdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${AGGREGATION_DB_PASSWORD}
+    ports:
+      - "5436:5432"
+    volumes:
+      - aggregation-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  notification-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: notificationdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${NOTIFICATION_DB_PASSWORD}
+    ports:
+      - "5437:5432"
+    volumes:
+      - notification-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # --- Application services ---
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      JWT_SECRET: ${JWT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      FRONTEND_URL: http://localhost:3000
+      Services__UserService: http://user-service:8081
+      Services__ReceiptService: http://receipt-service:8082
+      Services__DealService: http://deal-service:8083
+      Services__MatchingService: http://matching-service:8084
+      Services__AggregationService: http://aggregation-service:8085
+      Services__NotificationService: http://notification-service:8086
+      Seq__ServerUrl: http://seq:80
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      ASPNETCORE_URLS: http://+:8081
+      ConnectionStrings__DefaultConnection: "Host=user-db;Port=5432;Database=userdb;Username=postgres;Password=${USER_DB_PASSWORD}"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      Seq__ServerUrl: http://seq:80
+    depends_on:
+      user-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    restart: unless-stopped
+
+  receipt-service:
+    build:
+      context: .
+      dockerfile: services/receipt-service/Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      ASPNETCORE_URLS: http://+:8082
+      ConnectionStrings__DefaultConnection: "Host=receipt-db;Port=5432;Database=receiptdb;Username=postgres;Password=${RECEIPT_DB_PASSWORD}"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      MinIO__Endpoint: minio:9000
+      MinIO__AccessKey: ${MINIO_ROOT_USER}
+      MinIO__SecretKey: ${MINIO_ROOT_PASSWORD}
+      MinIO__BucketName: ${MINIO_BUCKET_NAME}
+      Seq__ServerUrl: http://seq:80
+    depends_on:
+      receipt-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    restart: unless-stopped
+
+  deal-service:
+    build:
+      context: .
+      dockerfile: services/deal-service/Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      ASPNETCORE_URLS: http://+:8083
+      ConnectionStrings__DefaultConnection: "Host=deal-db;Port=5432;Database=dealdb;Username=postgres;Password=${DEAL_DB_PASSWORD}"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      Seq__ServerUrl: http://seq:80
+    depends_on:
+      deal-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    restart: unless-stopped
+
+  matching-service:
+    build:
+      context: .
+      dockerfile: services/matching-service/Dockerfile
+    ports:
+      - "8084:8084"
+    environment:
+      ASPNETCORE_URLS: http://+:8084
+      ConnectionStrings__DefaultConnection: "Host=matching-db;Port=5432;Database=matchingdb;Username=postgres;Password=${MATCHING_DB_PASSWORD}"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      Seq__ServerUrl: http://seq:80
+    depends_on:
+      matching-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    restart: unless-stopped
+
+  aggregation-service:
+    build:
+      context: .
+      dockerfile: services/aggregation-service/Dockerfile
+    ports:
+      - "8085:8085"
+    environment:
+      ASPNETCORE_URLS: http://+:8085
+      ConnectionStrings__DefaultConnection: "Host=aggregation-db;Port=5432;Database=aggregationdb;Username=postgres;Password=${AGGREGATION_DB_PASSWORD}"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      Seq__ServerUrl: http://seq:80
+    depends_on:
+      aggregation-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    restart: unless-stopped
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    ports:
+      - "8086:8086"
+    environment:
+      ASPNETCORE_URLS: http://+:8086
+      ConnectionStrings__DefaultConnection: "Host=notification-db;Port=5432;Database=notificationdb;Username=postgres;Password=${NOTIFICATION_DB_PASSWORD}"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      Seq__ServerUrl: http://seq:80
+    depends_on:
+      notification-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: frontend/react-app
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+
+volumes:
+  seq-data:
+  rabbitmq-data:
+  minio-data:
+  user-db-data:
+  receipt-db-data:
+  deal-db-data:
+  matching-db-data:
+  aggregation-db-data:
+  notification-db-data:

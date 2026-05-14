@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  api-gateway:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    volumes:
+      - ./services/api-gateway:/app/src
+
+  user-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    volumes:
+      - ./services/user-service:/app/src
+
+  receipt-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    volumes:
+      - ./services/receipt-service:/app/src
+
+  deal-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    volumes:
+      - ./services/deal-service:/app/src
+
+  matching-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    volumes:
+      - ./services/matching-service:/app/src
+
+  aggregation-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    volumes:
+      - ./services/aggregation-service:/app/src
+
+  notification-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    volumes:
+      - ./services/notification-service:/app/src
+
+  frontend:
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./frontend/react-app/src:/app/src
