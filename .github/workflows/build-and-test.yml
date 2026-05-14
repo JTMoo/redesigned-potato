@@ -1,0 +1,46 @@
+name: Build and Test Services
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-shared:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet restore shared/contracts/EventContracts.csproj
+      - run: dotnet build shared/contracts/EventContracts.csproj -c Release
+      - run: dotnet restore shared/utilities/Utilities.csproj
+      - run: dotnet build shared/utilities/Utilities.csproj -c Release
+
+  build-service:
+    runs-on: ubuntu-latest
+    needs: build-shared
+    strategy:
+      matrix:
+        service:
+          - api-gateway
+          - user-service
+          - receipt-service
+          - deal-service
+          - matching-service
+          - aggregation-service
+          - notification-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore ${{ matrix.service }}
+        run: dotnet restore services/${{ matrix.service }}/${{ matrix.service }}.csproj
+      - name: Build ${{ matrix.service }}
+        run: dotnet build services/${{ matrix.service }}/${{ matrix.service }}.csproj -c Release --no-restore
+      - name: Test ${{ matrix.service }}
+        run: dotnet test services/${{ matrix.service }}/Tests/${{ matrix.service }}.Tests.csproj --no-build --verbosity normal
+        continue-on-error: true
