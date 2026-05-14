@@ -273,3 +273,15 @@ Add to **package.json**:
 3. Fix all errors and warnings
 4. Follow the strict configurations above for clean, maintainable code
 5. Document any exceptions or deviations in comments
+
+---
+
+## Clarification Requirements
+
+Claude agents **must** ask clarifying questions when:
+- Requirements contain conflicting information
+- Technical terms or definitions are unclear or missing
+- Instructions are ambiguous or underspecified
+- There are multiple valid interpretations of a request
+
+Do not assume intent or proceed with guesses. Always verify understanding directly with the user before starting work.
