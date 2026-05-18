@@ -21,4 +21,7 @@
     <ProjectReference Include="../../shared/contracts/EventContracts.csproj" />
     <ProjectReference Include="../../shared/utilities/Utilities.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Tests\**" />
+  </ItemGroup>
 </Project>
