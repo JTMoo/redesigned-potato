@@ -20,6 +20,9 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ReceiptDbContext>();
     db.Database.Migrate();
+
+    // Create MinIO bucket if it doesn't exist yet
+    await scope.ServiceProvider.EnsureMinioReadyAsync();
 }
 
 app.UseSerilogRequestLogging();
