@@ -7,6 +7,7 @@ services:
     image: datalust/seq:latest
     environment:
       - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORD=${SEQ_ADMIN_PASSWORD}
       - SEQ_API_KEY=${SEQ_API_KEY}
     ports:
       - "5341:80"
