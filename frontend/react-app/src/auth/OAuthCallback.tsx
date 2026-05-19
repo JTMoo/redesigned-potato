@@ -1,6 +1,6 @@
-import { useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "./AuthContext";
+import { useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 
 export default function OAuthCallback() {
   const [searchParams] = useSearchParams();
@@ -8,12 +8,12 @@ export default function OAuthCallback() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = searchParams.get("token");
+    const token = searchParams.get('token');
     if (token) {
       login(token);
-      navigate("/", { replace: true });
+      navigate('/', { replace: true });
     } else {
-      navigate("/login", { replace: true });
+      navigate('/login', { replace: true });
     }
   }, [searchParams, login, navigate]);
 
