@@ -46,4 +46,3 @@ jobs:
         run: dotnet restore services/${{ matrix.service }}/Tests/${{ matrix.service }}.Tests.csproj
       - name: Test ${{ matrix.service }}
         run: dotnet test services/${{ matrix.service }}/Tests/${{ matrix.service }}.Tests.csproj -c Release --verbosity normal
-        continue-on-error: true

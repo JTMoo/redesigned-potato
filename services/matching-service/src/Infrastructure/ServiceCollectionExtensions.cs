@@ -30,10 +30,10 @@ public static class ServiceCollectionExtensions
 
             x.UsingRabbitMq((ctx, cfg) =>
             {
-                cfg.Host(configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
+                cfg.Host(configuration["RabbitMQ__Host"] ?? "rabbitmq", "/", h =>
                 {
-                    h.Username(configuration["RabbitMq:Username"] ?? "guest");
-                    h.Password(configuration["RabbitMq:Password"] ?? "guest");
+                    h.Username(configuration["RabbitMQ__User"] ?? "guest");
+                    h.Password(configuration["RabbitMQ__Password"] ?? "guest");
                 });
                 cfg.ConfigureEndpoints(ctx);
             });

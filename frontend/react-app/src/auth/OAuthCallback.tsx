@@ -1,21 +1,23 @@
 import { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
 export default function OAuthCallback() {
-  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    if (token) {
-      login(token);
+    // Token is passed as a URL fragment (#token) so it is never sent to any
+    // server in HTTP requests and does not appear in access logs.
+    const token = window.location.hash.slice(1);
+    const decoded = token ? decodeURIComponent(token) : null;
+    if (decoded) {
+      login(decoded);
       navigate('/', { replace: true });
     } else {
       navigate('/login', { replace: true });
     }
-  }, [searchParams, login, navigate]);
+  }, [login, navigate]);
 
   return <p>Signing you in…</p>;
 }

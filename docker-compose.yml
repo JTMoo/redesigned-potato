@@ -189,9 +189,9 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8081
       ConnectionStrings__DefaultConnection: "Host=user-db;Port=5432;Database=userdb;Username=postgres;Password=${USER_DB_PASSWORD}"
-      RabbitMq__Host: rabbitmq
-      RabbitMq__Username: ${RABBITMQ_USER}
-      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__User: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
       Seq__ServerUrl: http://seq:80
     depends_on:
       user-db:
@@ -211,9 +211,9 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8082
       ConnectionStrings__DefaultConnection: "Host=receipt-db;Port=5432;Database=receiptdb;Username=postgres;Password=${RECEIPT_DB_PASSWORD}"
-      RabbitMq__Host: rabbitmq
-      RabbitMq__Username: ${RABBITMQ_USER}
-      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__User: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
       MinIO__Endpoint: minio:9000
       MinIO__AccessKey: ${MINIO_ROOT_USER}
       MinIO__SecretKey: ${MINIO_ROOT_PASSWORD}
@@ -239,9 +239,9 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8083
       ConnectionStrings__DefaultConnection: "Host=deal-db;Port=5432;Database=dealdb;Username=postgres;Password=${DEAL_DB_PASSWORD}"
-      RabbitMq__Host: rabbitmq
-      RabbitMq__Username: ${RABBITMQ_USER}
-      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__User: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
       Seq__ServerUrl: http://seq:80
     depends_on:
       deal-db:
@@ -261,9 +261,9 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8084
       ConnectionStrings__DefaultConnection: "Host=matching-db;Port=5432;Database=matchingdb;Username=postgres;Password=${MATCHING_DB_PASSWORD}"
-      RabbitMq__Host: rabbitmq
-      RabbitMq__Username: ${RABBITMQ_USER}
-      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__User: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
       Seq__ServerUrl: http://seq:80
     depends_on:
       matching-db:
@@ -283,9 +283,9 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8085
       ConnectionStrings__DefaultConnection: "Host=aggregation-db;Port=5432;Database=aggregationdb;Username=postgres;Password=${AGGREGATION_DB_PASSWORD}"
-      RabbitMq__Host: rabbitmq
-      RabbitMq__Username: ${RABBITMQ_USER}
-      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__User: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
       Seq__ServerUrl: http://seq:80
     depends_on:
       aggregation-db:
@@ -305,9 +305,9 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8086
       ConnectionStrings__DefaultConnection: "Host=notification-db;Port=5432;Database=notificationdb;Username=postgres;Password=${NOTIFICATION_DB_PASSWORD}"
-      RabbitMq__Host: rabbitmq
-      RabbitMq__Username: ${RABBITMQ_USER}
-      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__User: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
       Seq__ServerUrl: http://seq:80
     depends_on:
       notification-db:

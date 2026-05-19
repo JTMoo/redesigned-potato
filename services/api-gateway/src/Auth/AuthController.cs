@@ -46,7 +46,9 @@ public sealed class AuthController : ControllerBase
         var token = _jwtService.Issue(userId, email, name);
 
         var frontendUrl = _configuration["FRONTEND_URL"] ?? "http://localhost:3000";
-        return Redirect($"{frontendUrl}/auth/callback?token={token}");
+        // Use URL fragment (#) instead of query param so the token is never sent
+        // to the server in HTTP requests and does not appear in server access logs.
+        return Redirect($"{frontendUrl}/auth/callback#{Uri.EscapeDataString(token)}");
     }
 
     private async Task<string> EnsureUserExistsAsync(string googleId, string email, string name)
