@@ -31,6 +31,20 @@ builder.Services.AddAuthentication(options =>
     options.ClientSecret = builder.Configuration["GOOGLE_CLIENT_SECRET"]
         ?? throw new InvalidOperationException("GOOGLE_CLIENT_SECRET is required");
     options.CallbackPath = "/signin-google";
+    // Hardcode the redirect URI so it is always correct regardless of whether
+    // the request arrives directly (port 8080) or through the nginx proxy (port 3000)
+    // where the Host header has no port attached.
+    var redirectUri = builder.Configuration["GOOGLE_REDIRECT_URI"]
+        ?? "http://localhost:8080/signin-google";
+    options.Events.OnRedirectToAuthorizationEndpoint = ctx =>
+    {
+        var uri = new UriBuilder(ctx.RedirectUri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        query["redirect_uri"] = redirectUri;
+        uri.Query = query.ToString();
+        ctx.Response.Redirect(uri.ToString());
+        return Task.CompletedTask;
+    };
 })
 .AddJwtBearer(options =>
 {

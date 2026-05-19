@@ -165,6 +165,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: http://localhost:8080/signin-google
       FRONTEND_URL: http://localhost:3000
       Services__UserService: http://user-service:8081
       Services__ReceiptService: http://receipt-service:8082
