@@ -26,12 +26,15 @@ public sealed class AuthController : ControllerBase
     [HttpGet("/auth/google")]
     public IActionResult SignIn()
     {
+        // RedirectUri here is where the OAuth middleware sends the browser AFTER it
+        // has processed the Google callback at /signin-google (the CallbackPath).
+        // It must be different from CallbackPath or the middleware intercepts it again.
         var redirectUrl = Url.Action(nameof(GoogleCallback), "Auth");
         return Challenge(new AuthenticationProperties { RedirectUri = redirectUrl },
             GoogleDefaults.AuthenticationScheme);
     }
 
-    [HttpGet("/signin-google")]
+    [HttpGet("/auth/callback")]
     public async Task<IActionResult> GoogleCallback()
     {
         var result = await HttpContext.AuthenticateAsync();
