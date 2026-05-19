@@ -59,8 +59,8 @@ public sealed class GetReceiptsUseCaseTests
         var result = await sut.ExecuteAsync(ownerUserId);
 
         // Assert
-        result.Should().HaveCount(2);
-        result.Should().OnlyContain(r => r.UserId == ownerUserId);
+        result.Items.Should().HaveCount(2);
+        result.Items.Should().OnlyContain(r => r.UserId == ownerUserId);
     }
 
     [Fact]
@@ -98,7 +98,71 @@ public sealed class GetReceiptsUseCaseTests
         var result = await sut.ExecuteAsync(userId);
 
         // Assert — newest first
-        result[0].StoreName.Should().Be("New Store");
-        result[1].StoreName.Should().Be("Old Store");
+        result.Items[0].StoreName.Should().Be("New Store");
+        result.Items[1].StoreName.Should().Be("Old Store");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Page2_ReturnsSecondPageItems()
+    {
+        // Arrange
+        await using var db = CreateInMemoryDb();
+        var userId = Guid.NewGuid();
+        var baseTime = DateTimeOffset.UtcNow;
+
+        for (var i = 0; i < 5; i++)
+        {
+            db.Receipts.Add(new Receipt
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                StoreName = $"Store {i}",
+                Status = ReceiptStatus.Processed,
+                CreatedAt = baseTime.AddMinutes(-i),
+            });
+        }
+        await db.SaveChangesAsync();
+
+        var sut = new GetReceiptsUseCase(db, NullLogger<GetReceiptsUseCase>.Instance);
+
+        // Act
+        var page1 = await sut.ExecuteAsync(userId, page: 1, pageSize: 3);
+        var page2 = await sut.ExecuteAsync(userId, page: 2, pageSize: 3);
+
+        // Assert
+        page1.Items.Should().HaveCount(3);
+        page1.TotalCount.Should().Be(5);
+        page1.Page.Should().Be(1);
+
+        page2.Items.Should().HaveCount(2);
+        page2.TotalCount.Should().Be(5);
+        page2.Page.Should().Be(2);
+
+        page1.Items.Select(r => r.Id).Should().NotIntersectWith(page2.Items.Select(r => r.Id));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PageSizeClamped_WhenExceedsMax()
+    {
+        // Arrange
+        await using var db = CreateInMemoryDb();
+        var userId = Guid.NewGuid();
+        db.Receipts.Add(new Receipt
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            StoreName = "Store",
+            Status = ReceiptStatus.Processed,
+            CreatedAt = DateTimeOffset.UtcNow,
+        });
+        await db.SaveChangesAsync();
+
+        var sut = new GetReceiptsUseCase(db, NullLogger<GetReceiptsUseCase>.Instance);
+
+        // Act
+        var result = await sut.ExecuteAsync(userId, page: 1, pageSize: 500);
+
+        // Assert
+        result.PageSize.Should().Be(100);
     }
 }

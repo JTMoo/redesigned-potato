@@ -7,6 +7,8 @@ namespace ReceiptService.Application.UseCases;
 
 public sealed class GetReceiptsUseCase
 {
+    private const int MaxPageSize = 100;
+
     private readonly ReceiptDbContext _db;
     private readonly ILogger<GetReceiptsUseCase> _logger;
 
@@ -18,19 +20,31 @@ public sealed class GetReceiptsUseCase
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<ReceiptDto>> ExecuteAsync(
+    public async Task<PagedResult<ReceiptDto>> ExecuteAsync(
         Guid userId,
+        int page = 1,
+        int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
+
         _logger.LogInformation("Listing receipts for user {UserId}", userId);
 
-        var receipts = await _db.Receipts
+        var orderedQuery = _db.Receipts
+            .AsNoTracking()
             .Include(r => r.Items)
             .Where(r => r.UserId == userId)
-            .OrderByDescending(r => r.CreatedAt)
+            .OrderByDescending(r => r.CreatedAt);
+
+        var totalCount = await orderedQuery.CountAsync(cancellationToken);
+
+        var receipts = await orderedQuery
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return receipts.Select(r => new ReceiptDto(
+        var items = receipts.Select(r => new ReceiptDto(
             r.Id,
             r.UserId,
             r.StoreName,
@@ -41,5 +55,7 @@ public sealed class GetReceiptsUseCase
             r.Items.Select(i => new ReceiptItemDto(
                 i.Id, i.Description, i.Quantity, i.UnitPrice, i.Total)).ToList()
         )).ToList();
+
+        return new PagedResult<ReceiptDto>(items, page, pageSize, totalCount);
     }
 }

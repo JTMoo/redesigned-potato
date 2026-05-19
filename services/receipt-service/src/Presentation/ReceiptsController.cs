@@ -24,6 +24,11 @@ public sealed class ReceiptsController : ControllerBase
         _getReceiptUseCase = getReceiptUseCase;
     }
 
+    private static readonly HashSet<string> AllowedContentTypes =
+        ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+    private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
+
     [HttpPost]
     public async Task<IActionResult> Upload(
         [FromForm] IFormFile file,
@@ -36,6 +41,12 @@ public sealed class ReceiptsController : ControllerBase
 
         if (file is null || file.Length == 0)
             return BadRequest("A file is required.");
+
+        if (!AllowedContentTypes.Contains(file.ContentType))
+            return BadRequest("Only image files are accepted.");
+
+        if (file.Length > MaxFileSizeBytes)
+            return BadRequest("File must be smaller than 10 MB.");
 
         await using var stream = file.OpenReadStream();
         var dto = await _uploadUseCase.ExecuteAsync(
@@ -50,14 +61,17 @@ public sealed class ReceiptsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
         var userId = ParseUserId();
         if (userId is null)
             return Unauthorized();
 
-        var receipts = await _getReceiptsUseCase.ExecuteAsync(userId.Value, cancellationToken);
-        return Ok(receipts);
+        var result = await _getReceiptsUseCase.ExecuteAsync(userId.Value, page, pageSize, cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("{id:guid}")]
