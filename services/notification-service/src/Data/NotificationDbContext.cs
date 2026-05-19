@@ -23,8 +23,8 @@ public sealed class NotificationDbContext : DbContext
         {
             e.HasKey(l => l.Id);
             e.HasIndex(l => l.UserId);
+            e.Property(l => l.UserId).HasMaxLength(256);
             e.Property(l => l.Message).HasMaxLength(1000);
-            e.Property(l => l.Channel).HasMaxLength(50);
         });
     }
 }

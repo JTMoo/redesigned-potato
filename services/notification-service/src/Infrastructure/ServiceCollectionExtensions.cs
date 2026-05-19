@@ -1,5 +1,7 @@
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using NotificationService.Application.Consumers;
+using NotificationService.Application.UseCases;
 using NotificationService.Data;
 using NotificationService.Events;
 using Utilities;
@@ -20,6 +22,9 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 
+        services.AddScoped<GetNotificationsUseCase>();
+        services.AddScoped<MarkNotificationReadUseCase>();
+
         services.AddMassTransit(x =>
         {
             x.AddConsumer<UserCreatedConsumer>();
@@ -27,10 +32,10 @@ public static class ServiceCollectionExtensions
 
             x.UsingRabbitMq((ctx, cfg) =>
             {
-                cfg.Host(configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
+                cfg.Host(configuration["RabbitMQ__Host"] ?? "rabbitmq", "/", h =>
                 {
-                    h.Username(configuration["RabbitMq:Username"] ?? "guest");
-                    h.Password(configuration["RabbitMq:Password"] ?? "guest");
+                    h.Username(configuration["RabbitMQ__User"] ?? "guest");
+                    h.Password(configuration["RabbitMQ__Password"] ?? "guest");
                 });
                 cfg.ConfigureEndpoints(ctx);
             });
