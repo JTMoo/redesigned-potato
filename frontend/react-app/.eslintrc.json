@@ -1,5 +1,6 @@
 {
   "extends": ["airbnb-typescript"],
+  "plugins": ["react", "import", "jsx-a11y"],
   "parserOptions": {
     "project": "./tsconfig.json"
   },
@@ -8,6 +9,7 @@
     "no-unused-vars": "error",
     "prefer-const": "error",
     "eqeqeq": "error",
-    "react/react-in-jsx-scope": "off"
+    "react/react-in-jsx-scope": "off",
+    "@typescript-eslint/no-redeclare": "off"
   }
 }
