@@ -1,3 +1,4 @@
+using DealService.Application.UseCases;
 using DealService.Data;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -19,14 +20,19 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 
+        services.AddScoped<CreateDealUseCase>();
+        services.AddScoped<ListDealsUseCase>();
+        services.AddScoped<UpdateDealUseCase>();
+        services.AddScoped<ArchiveDealUseCase>();
+
         services.AddMassTransit(x =>
         {
             x.UsingRabbitMq((ctx, cfg) =>
             {
-                cfg.Host(configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
+                cfg.Host(configuration["RabbitMQ__Host"] ?? "rabbitmq", "/", h =>
                 {
-                    h.Username(configuration["RabbitMq:Username"] ?? "guest");
-                    h.Password(configuration["RabbitMq:Password"] ?? "guest");
+                    h.Username(configuration["RabbitMQ__User"] ?? "guest");
+                    h.Password(configuration["RabbitMQ__Password"] ?? "guest");
                 });
                 cfg.ConfigureEndpoints(ctx);
             });
