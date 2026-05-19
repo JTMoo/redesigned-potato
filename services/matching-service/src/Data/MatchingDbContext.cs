@@ -22,8 +22,8 @@ public sealed class MatchingDbContext : DbContext
         modelBuilder.Entity<RecommendationCache>(e =>
         {
             e.HasKey(r => r.Id);
-            e.HasIndex(r => new { r.UserId, r.DealId });
-            e.Property(r => r.Score).HasPrecision(10, 4);
+            e.HasIndex(r => r.DealId).IsUnique();
+            e.Property(r => r.DiscountAmount).HasPrecision(18, 2);
         });
     }
 }

@@ -1,6 +1,7 @@
 using MassTransit;
 using MatchingService.Data;
 using MatchingService.Events;
+using MatchingService.Features;
 using Microsoft.EntityFrameworkCore;
 using Utilities;
 
@@ -19,6 +20,7 @@ public static class ServiceCollectionExtensions
             opts.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+        services.AddScoped<MatchingEngine>();
 
         services.AddMassTransit(x =>
         {

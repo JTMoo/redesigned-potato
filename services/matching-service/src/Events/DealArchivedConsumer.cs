@@ -1,22 +1,40 @@
 using EventContracts.Events;
 using MassTransit;
+using MatchingService.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace MatchingService.Events;
 
 public sealed class DealArchivedConsumer : IConsumer<DealArchivedEvent>
 {
+    private readonly MatchingDbContext _db;
     private readonly ILogger<DealArchivedConsumer> _logger;
 
-    public DealArchivedConsumer(ILogger<DealArchivedConsumer> logger)
+    public DealArchivedConsumer(MatchingDbContext db, ILogger<DealArchivedConsumer> logger)
     {
+        ArgumentNullException.ThrowIfNull(db);
         ArgumentNullException.ThrowIfNull(logger);
+        _db = db;
         _logger = logger;
     }
 
-    public Task Consume(ConsumeContext<DealArchivedEvent> context)
+    public async Task Consume(ConsumeContext<DealArchivedEvent> context)
     {
-        _logger.LogInformation("Deal {DealId} archived — removed from cache (stub)", context.Message.DealId);
-        return Task.CompletedTask;
+        var dealId = context.Message.DealId;
+
+        var cached = await _db.RecommendationCache
+            .FirstOrDefaultAsync(r => r.DealId == dealId, context.CancellationToken);
+
+        if (cached is null)
+        {
+            _logger.LogWarning("Deal {DealId} not found in cache — nothing to remove", dealId);
+            return;
+        }
+
+        _db.RecommendationCache.Remove(cached);
+        await _db.SaveChangesAsync(context.CancellationToken);
+
+        _logger.LogInformation("Deal {DealId} removed from recommendation cache", dealId);
     }
 }
