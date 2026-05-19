@@ -41,3 +41,7 @@ nunit-*.xml
 wwwroot/.DS_Store
 .DS_Store
 .env
+
+# Agent worktrees
+.claude/worktrees/
+.claire/
