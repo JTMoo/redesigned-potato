@@ -381,4 +381,4 @@ An agent's work is complete when:
 - [ ] Serilog structured logging on all significant operations (not just errors)
 - [ ] New migrations added if domain model changed (`dotnet ef migrations add`)
 - [ ] `docker-compose.yml` / `.env.example` updated if new env vars introduced
-- [ ] Changes committed to a branch `wave2/<agent-name>` and pushed
+- [ ] Changes committed and pushed directly to `main`
