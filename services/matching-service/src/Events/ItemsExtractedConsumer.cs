@@ -2,7 +2,6 @@ using EventContracts.Events;
 using MassTransit;
 using MatchingService.Features;
 using Microsoft.Extensions.Logging;
-using Utilities;
 
 namespace MatchingService.Events;
 
@@ -10,22 +9,18 @@ public sealed class ItemsExtractedConsumer : IConsumer<ItemsExtractedEvent>
 {
     private readonly MatchingEngine _matchingEngine;
     private readonly IPublishEndpoint _publishEndpoint;
-    private readonly IDateTimeProvider _clock;
     private readonly ILogger<ItemsExtractedConsumer> _logger;
 
     public ItemsExtractedConsumer(
         MatchingEngine matchingEngine,
         IPublishEndpoint publishEndpoint,
-        IDateTimeProvider clock,
         ILogger<ItemsExtractedConsumer> logger)
     {
         ArgumentNullException.ThrowIfNull(matchingEngine);
         ArgumentNullException.ThrowIfNull(publishEndpoint);
-        ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(logger);
         _matchingEngine = matchingEngine;
         _publishEndpoint = publishEndpoint;
-        _clock = clock;
         _logger = logger;
     }
 
@@ -50,17 +45,17 @@ public sealed class ItemsExtractedConsumer : IConsumer<ItemsExtractedEvent>
             "{MatchCount} deal(s) matched for receipt {ReceiptId} — publishing savings events",
             matches.Count, msg.ReceiptId);
 
-        var now = _clock.UtcNow;
+        // Group matches by receipt to build a single summary event per receipt
+        var totalSavings = matches.Sum(m => m.EstimatedSavings);
+        var storeName = msg.Items.FirstOrDefault()?.Description ?? string.Empty;
 
-        var publishTasks = matches.Select(m => _publishEndpoint.Publish(
+        await _publishEndpoint.Publish(
             new PotentialSavingsFoundEvent(
-                UserId: m.UserId,
-                ReceiptId: m.ReceiptId,
-                MatchedDealId: m.DealId,
-                EstimatedSavings: m.EstimatedSavings,
-                OccurredAt: now),
-            context.CancellationToken));
-
-        await Task.WhenAll(publishTasks);
+                UserId: msg.UserId,
+                ReceiptId: msg.ReceiptId,
+                StoreName: storeName,
+                MatchCount: matches.Count,
+                TotalSavings: totalSavings),
+            context.CancellationToken);
     }
 }

@@ -58,14 +58,18 @@ public sealed class UsersController : ControllerBase
     }
 
     [HttpGet("{id:guid}/preferences")]
-    public async Task<IActionResult> GetPreferences(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetPreferences(
+        Guid id,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
         if (!TryGetUserId(out var requestingUserId))
             return BadRequest("X-User-Id header is missing or invalid.");
 
         try
         {
-            var prefs = await _updatePreferences.GetForUserAsync(id, requestingUserId, cancellationToken);
+            var prefs = await _updatePreferences.GetForUserAsync(id, requestingUserId, page, pageSize, cancellationToken);
             return Ok(prefs);
         }
         catch (NotFoundException ex)

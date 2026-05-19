@@ -18,7 +18,7 @@ public sealed class ListDealsUseCaseTests
         return new DealDbContext(options);
     }
 
-    private static Deal MakeDeal(bool isActive, string? zip = null) => new()
+    private static Deal MakeDeal(bool isActive, string? zip = null, DateTimeOffset? createdAt = null) => new()
     {
         Id = Guid.NewGuid(),
         Title = "Deal",
@@ -26,7 +26,7 @@ public sealed class ListDealsUseCaseTests
         DiscountAmount = 5m,
         LocationZip = zip,
         IsActive = isActive,
-        CreatedAt = DateTimeOffset.UtcNow,
+        CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
         UpdatedAt = DateTimeOffset.UtcNow,
     };
 
@@ -44,8 +44,9 @@ public sealed class ListDealsUseCaseTests
         var result = await sut.ExecuteAsync();
 
         // Assert
-        result.Should().HaveCount(2);
-        result.Should().AllSatisfy(d => d.IsActive.Should().BeTrue());
+        result.Items.Should().HaveCount(2);
+        result.Items.Should().AllSatisfy(d => d.IsActive.Should().BeTrue());
+        result.TotalCount.Should().Be(2);
     }
 
     [Fact]
@@ -67,9 +68,10 @@ public sealed class ListDealsUseCaseTests
         var result = await sut.ExecuteAsync(zip: "10001");
 
         // Assert
-        result.Should().HaveCount(2);
-        result.Should().NotContain(d => d.LocationZip == "90210");
-        result.Should().NotContain(d => !d.IsActive);
+        result.Items.Should().HaveCount(2);
+        result.TotalCount.Should().Be(2);
+        result.Items.Should().NotContain(d => d.LocationZip == "90210");
+        result.Items.Should().NotContain(d => !d.IsActive);
     }
 
     [Fact]
@@ -90,8 +92,9 @@ public sealed class ListDealsUseCaseTests
         var result = await sut.ExecuteAsync(zip: "10001");
 
         // Assert
-        result.Should().HaveCount(1);
-        result[0].LocationZip.Should().Be("10001");
+        result.Items.Should().HaveCount(1);
+        result.Items[0].LocationZip.Should().Be("10001");
+        result.TotalCount.Should().Be(1);
     }
 
     [Fact]
@@ -112,6 +115,57 @@ public sealed class ListDealsUseCaseTests
         var result = await sut.ExecuteAsync();
 
         // Assert
-        result.Should().HaveCount(2);
+        result.Items.Should().HaveCount(2);
+        result.TotalCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Page2_ReturnsSecondPageItems()
+    {
+        // Arrange
+        var db = CreateInMemoryDb();
+        var baseTime = DateTimeOffset.UtcNow;
+        for (var i = 0; i < 5; i++)
+        {
+            db.Deals.Add(MakeDeal(isActive: true, createdAt: baseTime.AddMinutes(-i)));
+        }
+        await db.SaveChangesAsync();
+
+        var sut = new ListDealsUseCase(db, NullLogger<ListDealsUseCase>.Instance);
+
+        // Act — page 1 has 3 items, page 2 has 2 items
+        var page1 = await sut.ExecuteAsync(page: 1, pageSize: 3);
+        var page2 = await sut.ExecuteAsync(page: 2, pageSize: 3);
+
+        // Assert
+        page1.Items.Should().HaveCount(3);
+        page1.Page.Should().Be(1);
+        page1.PageSize.Should().Be(3);
+        page1.TotalCount.Should().Be(5);
+
+        page2.Items.Should().HaveCount(2);
+        page2.Page.Should().Be(2);
+        page2.PageSize.Should().Be(3);
+        page2.TotalCount.Should().Be(5);
+
+        // Pages must not overlap
+        page1.Items.Select(d => d.Id).Should().NotIntersectWith(page2.Items.Select(d => d.Id));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PageSizeClamped_WhenExceedsMax()
+    {
+        // Arrange
+        var db = CreateInMemoryDb();
+        db.Deals.Add(MakeDeal(isActive: true));
+        await db.SaveChangesAsync();
+
+        var sut = new ListDealsUseCase(db, NullLogger<ListDealsUseCase>.Instance);
+
+        // Act — request pageSize well above 100
+        var result = await sut.ExecuteAsync(page: 1, pageSize: 500);
+
+        // Assert — pageSize is clamped to 100 in the result
+        result.PageSize.Should().Be(100);
     }
 }

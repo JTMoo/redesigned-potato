@@ -204,8 +204,9 @@ public sealed class UpdatePreferencesUseCaseTests
         var result = await sut.GetForUserAsync(user.Id, user.Id);
 
         // Assert
-        result.Should().HaveCount(1);
-        result[0].PreferenceKey.Should().Be("theme");
+        result.Items.Should().HaveCount(1);
+        result.TotalCount.Should().Be(1);
+        result.Items[0].PreferenceKey.Should().Be("theme");
     }
 
     [Fact]
@@ -221,5 +222,63 @@ public sealed class UpdatePreferencesUseCaseTests
 
         // Assert
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task GetForUserAsync_Page2_ReturnsSecondPageItems()
+    {
+        // Arrange
+        var db = CreateDb();
+        var user = await SeedUser(db);
+
+        for (var i = 0; i < 5; i++)
+        {
+            db.UserPreferences.Add(new UserPreference
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                PreferenceKey = $"key_{i:D2}",
+                Value = $"val_{i}",
+            });
+        }
+        await db.SaveChangesAsync();
+
+        var sut = new UpdatePreferencesUseCase(db, NullLogger<UpdatePreferencesUseCase>.Instance);
+
+        // Act
+        var page1 = await sut.GetForUserAsync(user.Id, user.Id, page: 1, pageSize: 3);
+        var page2 = await sut.GetForUserAsync(user.Id, user.Id, page: 2, pageSize: 3);
+
+        // Assert
+        page1.Items.Should().HaveCount(3);
+        page1.TotalCount.Should().Be(5);
+        page1.Page.Should().Be(1);
+
+        page2.Items.Should().HaveCount(2);
+        page2.TotalCount.Should().Be(5);
+        page2.Page.Should().Be(2);
+
+        page1.Items.Select(p => p.Id).Should().NotIntersectWith(page2.Items.Select(p => p.Id));
+    }
+
+    [Fact]
+    public async Task GetForUserAsync_PageSizeClamped_WhenExceedsMax()
+    {
+        // Arrange
+        var db = CreateDb();
+        var user = await SeedUser(db);
+        db.UserPreferences.Add(new UserPreference
+        {
+            Id = Guid.NewGuid(), UserId = user.Id, PreferenceKey = "theme", Value = "dark"
+        });
+        await db.SaveChangesAsync();
+
+        var sut = new UpdatePreferencesUseCase(db, NullLogger<UpdatePreferencesUseCase>.Instance);
+
+        // Act
+        var result = await sut.GetForUserAsync(user.Id, user.Id, page: 1, pageSize: 500);
+
+        // Assert
+        result.PageSize.Should().Be(100);
     }
 }

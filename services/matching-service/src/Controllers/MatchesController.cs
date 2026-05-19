@@ -1,3 +1,4 @@
+using MatchingService.Application.DTOs;
 using MatchingService.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,8 @@ namespace MatchingService.Controllers;
 [Route("[controller]")]
 public sealed class MatchesController : ControllerBase
 {
+    private const int MaxPageSize = 100;
+
     private readonly MatchingDbContext _db;
 
     public MatchesController(MatchingDbContext db)
@@ -21,7 +24,10 @@ public sealed class MatchesController : ControllerBase
     /// Reads the user id from the X-User-Id header forwarded by the API gateway.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetForUser(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetForUser(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
         if (!Request.Headers.TryGetValue("X-User-Id", out var rawUserId) ||
             !Guid.TryParse(rawUserId, out var userId))
@@ -29,9 +35,19 @@ public sealed class MatchesController : ControllerBase
             return BadRequest(new { error = "Missing or invalid X-User-Id header." });
         }
 
-        var matches = await _db.Matches
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
+
+        var orderedQuery = _db.Matches
+            .AsNoTracking()
             .Where(m => m.UserId == userId)
-            .OrderByDescending(m => m.CreatedAt)
+            .OrderByDescending(m => m.CreatedAt);
+
+        var totalCount = await orderedQuery.CountAsync(cancellationToken);
+
+        var matches = await orderedQuery
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(m => new
             {
                 m.Id,
@@ -42,6 +58,8 @@ public sealed class MatchesController : ControllerBase
             })
             .ToListAsync(cancellationToken);
 
-        return Ok(matches);
+        var result = new PagedResult<object>(matches, page, pageSize, totalCount);
+
+        return Ok(result);
     }
 }

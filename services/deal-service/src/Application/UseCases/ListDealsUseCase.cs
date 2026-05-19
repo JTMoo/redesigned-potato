@@ -1,3 +1,4 @@
+using DealService.Application.DTOs;
 using DealService.Data;
 using DealService.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,8 @@ namespace DealService.Application.UseCases;
 
 public sealed class ListDealsUseCase
 {
+    private const int MaxPageSize = 100;
+
     private readonly DealDbContext _db;
     private readonly ILogger<ListDealsUseCase> _logger;
 
@@ -18,12 +21,17 @@ public sealed class ListDealsUseCase
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<Deal>> ExecuteAsync(
+    public async Task<PagedResult<Deal>> ExecuteAsync(
         string? zip = null,
+        int page = 1,
+        int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
+
         // Always returns active deals only; optionally filtered by zip
-        var query = _db.Deals.Where(d => d.IsActive);
+        var query = _db.Deals.AsNoTracking().Where(d => d.IsActive);
 
         if (!string.IsNullOrWhiteSpace(zip))
         {
@@ -31,10 +39,19 @@ public sealed class ListDealsUseCase
             query = query.Where(d => d.LocationZip == null || d.LocationZip == zip);
         }
 
-        var deals = await query.OrderByDescending(d => d.CreatedAt).ToListAsync(cancellationToken);
+        var orderedQuery = query.OrderByDescending(d => d.CreatedAt);
 
-        _logger.LogInformation("Listed {Count} active deals (zip filter: {Zip})", deals.Count, zip ?? "none");
+        var totalCount = await orderedQuery.CountAsync(cancellationToken);
 
-        return deals;
+        var deals = await orderedQuery
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Listed {Count}/{Total} active deals (page {Page}/{PageSize}, zip filter: {Zip})",
+            deals.Count, totalCount, page, pageSize, zip ?? "none");
+
+        return new PagedResult<Deal>(deals, page, pageSize, totalCount);
     }
 }

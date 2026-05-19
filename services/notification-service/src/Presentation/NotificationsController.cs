@@ -21,14 +21,17 @@ public sealed class NotificationsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetNotifications(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetNotifications(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
         var userId = Request.Headers["X-User-Id"].FirstOrDefault();
         if (string.IsNullOrWhiteSpace(userId))
             return BadRequest(new { error = "X-User-Id header is required." });
 
-        var notifications = await _getNotifications.ExecuteAsync(userId, cancellationToken);
-        return Ok(notifications);
+        var result = await _getNotifications.ExecuteAsync(userId, page, pageSize, cancellationToken);
+        return Ok(result);
     }
 
     [HttpPatch("{id:guid}/read")]

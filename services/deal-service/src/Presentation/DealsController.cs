@@ -35,10 +35,12 @@ public sealed class DealsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? zip = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var deals = await _listDeals.ExecuteAsync(zip, cancellationToken);
-        return Ok(deals);
+        var result = await _listDeals.ExecuteAsync(zip, page, pageSize, cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("{id:guid}")]

@@ -11,6 +11,8 @@ public sealed record PreferenceInput(string PreferenceKey, string Value);
 
 public sealed class UpdatePreferencesUseCase
 {
+    private const int MaxPageSize = 100;
+
     private readonly UserDbContext _db;
     private readonly ILogger<UpdatePreferencesUseCase> _logger;
 
@@ -69,11 +71,16 @@ public sealed class UpdatePreferencesUseCase
         return newPreferences.Select(p => new PreferenceDto(p.Id, p.PreferenceKey, p.Value)).ToList();
     }
 
-    public async Task<IReadOnlyList<PreferenceDto>> GetForUserAsync(
+    public async Task<PagedResult<PreferenceDto>> GetForUserAsync(
         Guid userId,
         Guid requestingUserId,
+        int page = 1,
+        int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
+
         if (userId != requestingUserId)
         {
             _logger.LogWarning(
@@ -89,10 +96,19 @@ public sealed class UpdatePreferencesUseCase
             throw new NotFoundException($"User {userId} not found.");
         }
 
-        var prefs = await _db.UserPreferences
+        var orderedQuery = _db.UserPreferences
+            .AsNoTracking()
             .Where(p => p.UserId == userId)
+            .OrderBy(p => p.PreferenceKey);
+
+        var totalCount = await orderedQuery.CountAsync(cancellationToken);
+
+        var prefs = await orderedQuery
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return prefs.Select(p => new PreferenceDto(p.Id, p.PreferenceKey, p.Value)).ToList();
+        var items = prefs.Select(p => new PreferenceDto(p.Id, p.PreferenceKey, p.Value)).ToList();
+        return new PagedResult<PreferenceDto>(items, page, pageSize, totalCount);
     }
 }

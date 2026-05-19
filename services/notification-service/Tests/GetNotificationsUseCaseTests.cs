@@ -36,8 +36,9 @@ public sealed class GetNotificationsUseCaseTests
         var result = await sut.ExecuteAsync(userId);
 
         // Assert
-        result.Should().HaveCount(2);
-        result.Should().OnlyContain(n => n.UserId == userId);
+        result.Items.Should().HaveCount(2);
+        result.TotalCount.Should().Be(2);
+        result.Items.Should().OnlyContain(n => n.UserId == userId);
     }
 
     [Fact]
@@ -63,9 +64,9 @@ public sealed class GetNotificationsUseCaseTests
         var result = await sut.ExecuteAsync(userId);
 
         // Assert
-        result.Should().HaveCount(2);
-        result[0].Id.Should().Be(unreadId, "unread notification should appear first");
-        result[1].Id.Should().Be(readId);
+        result.Items.Should().HaveCount(2);
+        result.Items[0].Id.Should().Be(unreadId, "unread notification should appear first");
+        result.Items[1].Id.Should().Be(readId);
     }
 
     [Fact]
@@ -91,8 +92,8 @@ public sealed class GetNotificationsUseCaseTests
         var result = await sut.ExecuteAsync(userId);
 
         // Assert
-        result[0].Id.Should().Be(newerUnreadId, "newer unread notification should appear first");
-        result[1].Id.Should().Be(olderUnreadId);
+        result.Items[0].Id.Should().Be(newerUnreadId, "newer unread notification should appear first");
+        result.Items[1].Id.Should().Be(olderUnreadId);
     }
 
     [Fact]
@@ -106,6 +107,73 @@ public sealed class GetNotificationsUseCaseTests
         var result = await sut.ExecuteAsync(Guid.NewGuid().ToString());
 
         // Assert
-        result.Should().BeEmpty();
+        result.Items.Should().BeEmpty();
+        result.TotalCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Execute_Page2_ReturnsSecondPageItems()
+    {
+        // Arrange
+        var db = CreateDb();
+        var userId = Guid.NewGuid().ToString();
+        var now = DateTimeOffset.UtcNow;
+
+        for (var i = 0; i < 5; i++)
+        {
+            db.Logs.Add(new NotificationLog
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                ReceiptId = Guid.NewGuid(),
+                Message = $"Msg {i}",
+                IsRead = false,
+                CreatedAt = now.AddMinutes(-i),
+            });
+        }
+        await db.SaveChangesAsync();
+
+        var sut = new GetNotificationsUseCase(db, NullLogger<GetNotificationsUseCase>.Instance);
+
+        // Act
+        var page1 = await sut.ExecuteAsync(userId, page: 1, pageSize: 3);
+        var page2 = await sut.ExecuteAsync(userId, page: 2, pageSize: 3);
+
+        // Assert
+        page1.Items.Should().HaveCount(3);
+        page1.TotalCount.Should().Be(5);
+        page1.Page.Should().Be(1);
+
+        page2.Items.Should().HaveCount(2);
+        page2.TotalCount.Should().Be(5);
+        page2.Page.Should().Be(2);
+
+        page1.Items.Select(n => n.Id).Should().NotIntersectWith(page2.Items.Select(n => n.Id));
+    }
+
+    [Fact]
+    public async Task Execute_PageSizeClamped_WhenExceedsMax()
+    {
+        // Arrange
+        var db = CreateDb();
+        var userId = Guid.NewGuid().ToString();
+        db.Logs.Add(new NotificationLog
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            ReceiptId = Guid.NewGuid(),
+            Message = "Msg",
+            IsRead = false,
+            CreatedAt = DateTimeOffset.UtcNow,
+        });
+        await db.SaveChangesAsync();
+
+        var sut = new GetNotificationsUseCase(db, NullLogger<GetNotificationsUseCase>.Instance);
+
+        // Act
+        var result = await sut.ExecuteAsync(userId, page: 1, pageSize: 500);
+
+        // Assert
+        result.PageSize.Should().Be(100);
     }
 }
