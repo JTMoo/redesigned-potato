@@ -1,6 +1,7 @@
 using ApiGateway.Auth;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using Xunit;
 
 namespace ApiGateway.Tests;
 

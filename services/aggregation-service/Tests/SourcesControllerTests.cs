@@ -1,6 +1,7 @@
 using AggregationService.Controllers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
+using Xunit;
 
 namespace AggregationService.Tests;
 
