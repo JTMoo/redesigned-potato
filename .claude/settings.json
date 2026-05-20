@@ -3,5 +3,20 @@
     "allow": [
       "mcp__github__get_me"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath // empty' | { read -r f; case \"$f\" in *.csproj) dotnet restore /Users/jonathantrefz/sources/redesigned-potato/expense-tracker.sln 2>&1 | tail -5;; esac; } 2>/dev/null || true",
+            "timeout": 60,
+            "statusMessage": "Restoring NuGet packages..."
+          }
+        ]
+      }
+    ]
   }
 }

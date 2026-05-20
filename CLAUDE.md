@@ -276,6 +276,23 @@ Add to **package.json**:
 
 ---
 
+## Build Verification
+
+After **any** implementation — adding features, fixing bugs, refactoring, changing dependencies — the full solution build **must** pass cleanly before the work is considered done:
+
+```bash
+dotnet restore expense-tracker.sln
+dotnet build expense-tracker.sln -c Release --no-restore
+```
+
+**Rules:**
+- Zero errors and zero warnings are required — treat warnings as errors
+- Run from the repo root (`/Users/jonathantrefz/sources/redesigned-potato`)
+- If the build fails, fix it before committing; never commit a broken build
+- When a `.csproj` is changed (package added/removed, framework changed), run `dotnet restore expense-tracker.sln` immediately
+
+---
+
 ## Clarification Requirements
 
 Claude agents **must** ask clarifying questions when:
