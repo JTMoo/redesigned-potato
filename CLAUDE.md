@@ -290,6 +290,39 @@ dotnet build expense-tracker.sln -c Release --no-restore
 - Run from the repo root (`/Users/jonathantrefz/sources/redesigned-potato`)
 - If the build fails, fix it before committing; never commit a broken build
 - When a `.csproj` is changed (package added/removed, framework changed), run `dotnet restore expense-tracker.sln` immediately
+- If stale artifacts cause spurious copy errors, run `dotnet clean expense-tracker.sln` first
+
+---
+
+## Test Verification
+
+After **any** implementation, **all tests must pass** before the work is considered done:
+
+```bash
+dotnet test expense-tracker.sln -c Release --no-build
+```
+
+**Rules:**
+- All tests must pass — 0 failures, 0 errors
+- Run from the repo root after a successful build
+- Never commit code that causes test regressions
+- If a test was previously passing and your change breaks it, fix the test or the code before committing — do not skip or delete tests to make the suite green
+- The solution currently has **90 tests across 7 projects** — keep this count growing, never shrinking
+
+---
+
+## CI Pipeline Verification
+
+After every push to `main`, verify the GitHub Actions pipeline passes:
+
+1. Navigate to the **Actions** tab at `https://github.com/JTMoo/redesigned-potato/actions`
+2. Confirm the latest **"Build and Test Services"** run is green
+3. If any job is red, investigate and fix before continuing
+
+**Rules:**
+- Never leave a red pipeline unresolved
+- The pipeline runs `dotnet restore`, `dotnet build`, and `dotnet test` for every service — it must mirror what passes locally
+- When adding a new service, add it to the matrix in `.github/workflows/build-and-test.yml`
 
 ---
 

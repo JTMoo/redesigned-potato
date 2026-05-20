@@ -1,3 +1,4 @@
+using DealService.Application.DTOs;
 using DealService.Application.UseCases;
 using DealService.Data;
 using DealService.Presentation;
@@ -119,10 +120,10 @@ public sealed class DealsControllerTests
 
         // Act
         var result = (OkObjectResult)(await sut.GetAll(zip: "10001"));
-        var deals = (IReadOnlyList<DealService.Domain.Deal>)result.Value!;
+        var paged = (PagedResult<DealService.Domain.Deal>)result.Value!;
 
         // Assert
         // Only deals matching zip 10001 or with no zip should be returned
-        deals.Should().NotContain(d => d.LocationZip == "90210");
+        paged.Items.Should().NotContain(d => d.LocationZip == "90210");
     }
 }
